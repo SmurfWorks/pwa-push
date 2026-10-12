@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Device;
 use App\Models\PushApp;
+use App\Support\DeliveryClock;
 use App\Support\Origins;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
+use InvalidArgumentException;
 
 class UpsertAlertRequest extends FormRequest
 {
@@ -50,6 +53,36 @@ class UpsertAlertRequest extends FormRequest
                     $validator->errors()->add($field, 'Use an address on a site registered for this app.');
                 }
             }
+
+            $deliverAt = $this->input('deliver_at');
+
+            if (! is_string($deliverAt) || $validator->errors()->has('deliver_at')) {
+                return;
+            }
+
+            $device = $this->registeredDevice();
+
+            if ($device === null) {
+                return;
+            }
+
+            try {
+                DeliveryClock::resolve($deliverAt, $device->timezone);
+            } catch (InvalidArgumentException $exception) {
+                $validator->errors()->add('deliver_at', $exception->getMessage());
+            }
         });
+    }
+
+    private function registeredDevice(): ?Device
+    {
+        $app = $this->attributes->get('pushApp');
+        $id = $this->route('device');
+
+        if (! $app instanceof PushApp || ! is_string($id)) {
+            return null;
+        }
+
+        return $app->devices()->whereKey($id)->first();
     }
 }

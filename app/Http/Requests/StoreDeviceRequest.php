@@ -23,6 +23,7 @@ class StoreDeviceRequest extends FormRequest
             'subscription.keys.p256dh' => ['required', 'string', 'max:255'],
             'subscription.keys.auth' => ['required', 'string', 'max:255'],
             'subscription.contentEncoding' => ['sometimes', 'nullable', 'in:aes128gcm,aesgcm'],
+            'timezone' => ['sometimes', 'required', 'string', 'timezone'],
         ];
     }
 
@@ -33,6 +34,7 @@ class StoreDeviceRequest extends FormRequest
     {
         return [
             'subscription.endpoint.starts_with' => 'The push subscription address must start with https://.',
+            'timezone.timezone' => 'Use a timezone name such as America/Los_Angeles.',
         ];
     }
 }

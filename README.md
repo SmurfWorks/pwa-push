@@ -56,13 +56,14 @@ The public key, which the app passes to `pushManager.subscribe`:
 GET /api/vapid-public-key
 ```
 
-Register this phone. Send the subscription object from `subscription.toJSON()`. The same call again updates the keys and returns the same id.
+Register this phone. Send the subscription object from `subscription.toJSON()`, and the timezone the phone is set to, such as `America/Los_Angeles`. The same call again updates the keys and the timezone, and returns the same id. Leaving the timezone out keeps the one already stored.
 
 ```http
 POST /api/devices
 Authorization: Bearer {app token}
 
 {
+  "timezone": "America/Los_Angeles",
   "subscription": {
     "endpoint": "https://...",
     "keys": { "p256dh": "...", "auth": "..." }
@@ -71,6 +72,8 @@ Authorization: Bearer {app token}
 ```
 
 Book a notification. The key is yours (`expiry`, `time-09:00`, `2026-10-12T17:00`). Putting the same key again replaces it. If the time or the text changed, it will send again. If nothing changed, a notification that already went out stays sent.
+
+`deliver_at` can be a moment that already includes a timezone, such as `2026-10-12T16:00:00Z`, or a clock time with none, such as `2026-10-12T09:00:00`. A clock time is read in the phone's timezone, so 9:00 is sent when that phone reaches 9:00. Register the timezone before booking a clock time. When the phone's timezone changes, a waiting clock time moves with it. A time that already includes a timezone stays at that moment. When the clocks go back and a time happens twice, the earlier one is used. When the clocks go forward and a time is skipped, that booking is refused.
 
 ```http
 PUT /api/devices/{id}/notifications/{key}

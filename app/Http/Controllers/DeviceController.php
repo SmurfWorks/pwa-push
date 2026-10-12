@@ -44,7 +44,16 @@ class DeviceController extends Controller
         $device->public_key = $request->string('subscription.keys.p256dh')->toString();
         $device->auth_token = $request->string('subscription.keys.auth')->toString();
         $device->content_encoding = $request->input('subscription.contentEncoding') ?: 'aes128gcm';
+
+        if ($request->exists('timezone')) {
+            $device->timezone = $request->string('timezone')->toString();
+        }
+
         $device->save();
+
+        if ($device->wasChanged('timezone')) {
+            $device->retargetLocalAlerts();
+        }
 
         return response()->json($device->toPublicArray(), $created ? 201 : 200);
     }

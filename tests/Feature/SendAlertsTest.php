@@ -102,13 +102,28 @@ class SendAlertsTest extends TestCase
         $this->assertSame('sent', Alert::query()->firstOrFail()->status());
     }
 
-    private function device(): Device
+    public function test_it_sends_a_clock_time_when_that_phone_reaches_it(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-12T08:00:00Z'));
+        $london = $this->device('Europe/London');
+        $losAngeles = $this->device('America/Los_Angeles');
+        Alert::schedule($london, 'morning', $this->alert('2026-10-12T09:00:00'));
+        Alert::schedule($losAngeles, 'morning', $this->alert('2026-10-12T09:00:00'));
+
+        $this->artisan('alerts:send')->assertSuccessful();
+
+        $this->assertSame([[$london->id, 'morning']], $this->sender->sent);
+        $this->assertSame('sent', $london->alerts()->firstOrFail()->status());
+        $this->assertSame('pending', $losAngeles->alerts()->firstOrFail()->status());
+    }
+
+    private function device(?string $timezone = null): Device
     {
         $app = new PushApp([
             'name' => 'Dosage Helper '.fake()->unique()->word(),
             'origins' => ['https://dosage.example'],
         ]);
-        $app->token_hash = hash('sha256', 'token');
+        $app->token_hash = hash('sha256', fake()->uuid());
         $app->save();
 
         $device = new Device([
@@ -117,6 +132,7 @@ class SendAlertsTest extends TestCase
             'public_key' => str_repeat('a', 80),
             'auth_token' => str_repeat('b', 22),
             'content_encoding' => 'aes128gcm',
+            'timezone' => $timezone,
         ]);
         $device->save();
 

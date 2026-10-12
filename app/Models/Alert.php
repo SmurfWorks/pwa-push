@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Support\DeliveryClock;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
-#[Fillable(['push_app_id', 'device_id', 'key', 'deliver_at', 'grace_minutes', 'title', 'body', 'url', 'icon', 'tag'])]
+#[Fillable(['push_app_id', 'device_id', 'key', 'deliver_at', 'local_deliver_at', 'grace_minutes', 'title', 'body', 'url', 'icon', 'tag'])]
 class Alert extends Model
 {
     use HasUuids;
@@ -55,7 +55,9 @@ class Alert extends Model
             'key' => $key,
         ]);
 
-        $deliverAt = Carbon::parse($fields['deliver_at'])->utc()->startOfSecond();
+        $resolved = DeliveryClock::resolve((string) $fields['deliver_at'], $device->timezone);
+        $deliverAt = $resolved['instant'];
+        $local = $resolved['local'];
         $next = [
             'title' => $fields['title'],
             'body' => $fields['body'],
@@ -76,6 +78,7 @@ class Alert extends Model
 
         $alert->push_app_id = $device->push_app_id;
         $alert->deliver_at = $deliverAt;
+        $alert->local_deliver_at = $local;
         $alert->title = $next['title'];
         $alert->body = $next['body'];
         $alert->url = $next['url'];
@@ -108,13 +111,14 @@ class Alert extends Model
     }
 
     /**
-     * @return array{key: string, deliver_at: string, grace_minutes: int, title: string, body: string, url: ?string, icon: ?string, tag: ?string, status: string}
+     * @return array{key: string, deliver_at: string, local_deliver_at: ?string, grace_minutes: int, title: string, body: string, url: ?string, icon: ?string, tag: ?string, status: string}
      */
     public function toPublicArray(): array
     {
         return [
             'key' => $this->key,
             'deliver_at' => $this->deliver_at->utc()->format('Y-m-d\TH:i:s\Z'),
+            'local_deliver_at' => $this->local_deliver_at,
             'grace_minutes' => $this->grace_minutes,
             'title' => $this->title,
             'body' => $this->body,

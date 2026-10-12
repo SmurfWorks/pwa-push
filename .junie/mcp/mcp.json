@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/Users/glyn/Library/Application Support/Herd/bin/php84",
+            "args": [
+                "/Users/glyn/Herd/pwa-push/artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}
